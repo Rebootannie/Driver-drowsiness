@@ -1,12 +1,18 @@
-# React + Vite
+# Driver Drowsiness Detection System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This project aims to develop a **Driver Drowsiness Detection System** that monitors a driver's alertness in real-time to prevent potential accidents caused by fatigue. Utilizing computer vision techniques, the system detects signs of drowsiness and alerts the driver accordingly.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Real-time Monitoring**: Continuously analyzes the driver's facial features to detect signs of drowsiness.
+- **Alert System**: Provides immediate alerts when drowsiness is detected to ensure driver safety.
+- **User-Friendly Interface**: Simple and intuitive interface for ease of use.
 
-## Expanding the ESLint configuration
+## Installation
 
-If you are developing a production application, we recommend using TypeScript and enable type-aware lint rules. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+To set up the project locally, follow these steps:
+
+1. **Clone the Repository**:
+
+   ```bash
+   git clone https://github.com/Shaurya-Aggarwal07/A4-Driver-Drowsiness-detection-system.git
