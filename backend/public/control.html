@@ -1,0 +1,193 @@
+<!-- backend/public/control.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drowsiness Detection Control Panel</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .panel {
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .button {
+      padding: 10px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .button.stop {
+      background-color: #f44336;
+    }
+    .button.manual {
+      background-color: #2196F3;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #f8f8f8;
+      border-left: 4px solid #4CAF50;
+    }
+    .log {
+      height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      background-color: #f5f5f5;
+      font-family: monospace;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Drowsiness Detection Control Panel</h1>
+  
+  <div class="panel">
+    <h2>Simulation Controls</h2>
+    <button class="button" id="startSimulation">Start Simulation</button>
+    <button class="button stop" id="stopSimulation">Stop Simulation</button>
+    
+    <div class="status" id="simulationStatus">
+      Status: Checking...
+    </div>
+  </div>
+  
+  <div class="panel">
+    <h2>Manual Control</h2>
+    <button class="button manual" id="setDrowsy">Set Drowsy</button>
+    <button class="button manual" id="setAlert">Set Alert</button>
+  </div>
+  
+  <div class="panel">
+    <h2>Data Statistics</h2>
+    <div id="dataStats">
+      Loading...
+    </div>
+  </div>
+  
+  <div class="log" id="logOutput">
+    <!-- Logs will be displayed here -->
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:5000/api';
+    
+    // Log message to UI
+    function log(message) {
+      const logElement = document.getElementById('logOutput');
+      const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+      logElement.innerHTML += `[${timestamp}] ${message}<br>`;
+      logElement.scrollTop = logElement.scrollHeight;
+    }
+    
+    // Update simulation status
+    async function updateStatus() {
+      try {
+        const response = await fetch(`${API_BASE}/simulation/status`);
+        const data = await response.json();
+        
+        document.getElementById('simulationStatus').innerHTML = `
+          Status: ${data.active ? 'Running' : 'Stopped'}<br>
+          Current State: ${data.currentState}<br>
+        `;
+        
+        document.getElementById('dataStats').innerHTML = `
+          Total Data Points: ${data.dataPoints}<br>
+          Total Alerts: ${data.alerts}<br>
+        `;
+        
+        return data;
+      } catch (error) {
+        log(`Error updating status: ${error.message}`);
+        document.getElementById('simulationStatus').innerHTML = 'Status: Error connecting to server';
+        document.getElementById('dataStats').innerHTML = 'Unable to fetch data statistics';
+      }
+    }
+    
+    // Start simulation
+    document.getElementById('startSimulation').addEventListener('click', async () => {
+      try {
+        const response = await fetch(`${API_BASE}/simulation/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        log(`Simulation start response: ${data.message || data.error}`);
+        updateStatus();
+      } catch (error) {
+        log(`Error starting simulation: ${error.message}`);
+      }
+    });
+    
+    // Stop simulation
+    document.getElementById('stopSimulation').addEventListener('click', async () => {
+      try {
+        const response = await fetch(`${API_BASE}/simulation/stop`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        log(`Simulation stop response: ${data.message || data.error}`);
+        updateStatus();
+      } catch (error) {
+        log(`Error stopping simulation: ${error.message}`);
+      }
+    });
+    
+    // Set drowsy state
+    document.getElementById('setDrowsy').addEventListener('click', async () => {
+      try {
+        const response = await fetch(`${API_BASE}/manual/state`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isDrowsy: true })
+        });
+        
+        const data = await response.json();
+        log(`Set state response: ${data.message || data.error}`);
+        updateStatus();
+      } catch (error) {
+        log(`Error setting state: ${error.message}`);
+      }
+    });
+    
+    // Set alert state
+    document.getElementById('setAlert').addEventListener('click', async () => {
+      try {
+        const response = await fetch(`${API_BASE}/manual/state`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isDrowsy: false })
+        });
+        
+        const data = await response.json();
+        log(`Set state response: ${data.message || data.error}`);
+        updateStatus();
+      } catch (error) {
+        log(`Error setting state: ${error.message}`);
+      }
+    });
+    
+    // Initial status check
+    updateStatus();
+    
+    // Update status periodically
+    setInterval(updateStatus, 5000);
+    
+    log('Control panel initialized');
+  </script>
+</body>
+</html>

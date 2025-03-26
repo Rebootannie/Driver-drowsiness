@@ -1,44 +1,54 @@
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 
-const MOCK_ALERTS = [
-  {
-    id: "alert-1",
-    timestamp: "2025-03-25 13:25:30",
-    type: "drowsiness",
-    message: "High drowsiness level detected",
-    severity: "high"
-  },
-  {
-    id: "alert-2",
-    timestamp: "2025-03-25 13:14:12",
-    type: "distraction",
-    message: "Driver distraction detected",
-    severity: "medium"
-  },
-  {
-    id: "alert-3",
-    timestamp: "2025-03-25 12:59:45",
-    type: "drowsiness",
-    message: "Increasing drowsiness level",
-    severity: "medium"
-  },
-  {
-    id: "alert-4",
-    timestamp: "2025-03-25 12:45:21",
-    type: "system",
-    message: "System calibration complete",
-    severity: "low"
-  },
-  {
-    id: "alert-5",
-    timestamp: "2025-03-25 12:30:08",
-    type: "system",
-    message: "Detection system started",
-    severity: "low"
-  }
-]
+
+// ------------------------------------------
+// src/components/dashboard/recent-alerts.jsx
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
+import drowsinessService from "../../lib/drowsiness-service"
 
 export function RecentAlerts() {
+  const [alerts, setAlerts] = useState([])
+  
+  useEffect(() => {
+    const unsubscribe = drowsinessService.addListener((data) => {
+      if (data.length < 2) return;
+      
+      // Look for state transitions to drowsy
+      const alertEvents = [];
+      
+      for (let i = 1; i < data.length; i++) {
+        // If state changed from alert to drowsy
+        if (!data[i-1].isDrowsy && data[i].isDrowsy) {
+          alertEvents.push({
+            id: `alert-${i}-${data[i].timestamp}`,
+            timestamp: data[i].timestamp,
+            type: "drowsiness",
+            message: "Drowsiness detected!",
+            severity: "high"
+          });
+        }
+      }
+      
+      // Sort by most recent and take only the 5 most recent alerts
+      const recentAlerts = alertEvents
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .slice(0, 5);
+      
+      setAlerts(recentAlerts);
+    });
+    
+    return unsubscribe;
+  }, []);
+
+  const formatTimestamp = (isoString) => {
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleString();
+    } catch (e) {
+      return isoString;
+    }
+  };
+
   const getSeverityClass = (severity) => {
     switch (severity) {
       case "high":
@@ -51,6 +61,8 @@ export function RecentAlerts() {
         return "bg-gray-500"
     }
   }
+  
+  // Keep existing getTypeIcon function...
   
   const getTypeIcon = (type) => {
     switch (type) {
@@ -79,7 +91,8 @@ export function RecentAlerts() {
         )
     }
   }
-  
+
+
   return (
     <Card className="col-span-1">
       <CardHeader>
@@ -87,17 +100,21 @@ export function RecentAlerts() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {MOCK_ALERTS.map((alert) => (
-            <div key={alert.id} className="flex items-start gap-4 border-b pb-4 last:border-0">
-              <div className={`${getSeverityClass(alert.severity)} text-white p-2 rounded-md mt-1`}>
-                {getTypeIcon(alert.type)}
+          {alerts.length > 0 ? (
+            alerts.map((alert) => (
+              <div key={alert.id} className="flex items-start gap-4 border-b pb-4 last:border-0">
+                <div className={`${getSeverityClass(alert.severity)} text-white p-2 rounded-md mt-1`}>
+                  {getTypeIcon(alert.type)}
+                </div>
+                <div>
+                  <p className="font-medium">{alert.message}</p>
+                  <p className="text-sm text-muted-foreground">{formatTimestamp(alert.timestamp)}</p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium">{alert.message}</p>
-                <p className="text-sm text-muted-foreground">{alert.timestamp}</p>
-              </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-center text-muted-foreground">No recent alerts</p>
+          )}
         </div>
       </CardContent>
     </Card>

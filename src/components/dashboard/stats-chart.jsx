@@ -1,51 +1,70 @@
-import { useEffect, useState } from "react"
+// src/components/dashboard/stats-chart.jsx
+import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import drowsinessService from "../../lib/drowsiness-service"
 
-// Mock data for demo purposes
-const generateMockData = (points) => {
-  const data = []
-  const start = Date.now() - points * 60000
-  
-  for (let i = 0; i < points; i++) {
-    const timestamp = new Date(start + i * 60000)
-    const timeString = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    
-    // Generate random values with some realistic patterns
-    const drowsinessValue = Math.max(0, Math.min(100, 
-      20 + Math.sin(i / 3) * 15 + Math.random() * 10 + 
-      (i > points * 0.7 ? 30 : 0)  // Increase drowsiness near the end
-    ))
-    
-    data.push({
-      time: timeString,
-      drowsiness: drowsinessValue
-    })
-  }
-  return data
-}
+// Format timestamp for display
+const formatTime = (timestamp) => {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+// Process raw data for chart display
+const processChartData = (rawData) => {
+  return rawData.map(item => ({
+    time: formatTime(item.timestamp),
+    drowsiness: item.isDrowsy ? 100 : 0, // Convert boolean to numeric for display
+    alertState: item.isDrowsy ? "Drowsy" : "Alert"
+  }));
+};
 
 export function StatsChart() {
-  const [data, setData] = useState(() => generateMockData(24))
-  const [activeTab, setActiveTab] = useState("1h")
+  const [data, setData] = useState([]);
+  const [activeTab, setActiveTab] = useState("1h");
+  const [drowsyPercentage, setDrowsyPercentage] = useState(0);
   
+  // Data update callback
+  const updateData = useCallback((rawData) => {
+    let filteredData = rawData;
+    
+    // Filter by time range based on active tab
+    const hours = activeTab === "1h" ? 1 : activeTab === "3h" ? 3 : 24;
+    const cutoff = new Date();
+    cutoff.setHours(cutoff.getHours() - hours);
+    
+    filteredData = rawData.filter(d => new Date(d.timestamp) >= cutoff);
+    
+    // Calculate percentage of time spent drowsy
+    const drowsyPoints = filteredData.filter(d => d.isDrowsy).length;
+    const percentage = filteredData.length > 0 ? 
+      Math.round((drowsyPoints / filteredData.length) * 100) : 0;
+    setDrowsyPercentage(percentage);
+    
+    // Process for chart display
+    setData(processChartData(filteredData));
+  }, [activeTab]);
+  
+  // Subscribe to drowsiness service
   useEffect(() => {
-    let points = 60
+    // Initial data load
+    drowsinessService.fetchHistory(
+      activeTab === "1h" ? 1 : activeTab === "3h" ? 3 : 24
+    );
     
-    if (activeTab === "1h") points = 60
-    else if (activeTab === "3h") points = 180
-    else if (activeTab === "24h") points = 24 * 60
-    
-    setData(generateMockData(points / 10))  // Reducing points for demo performance
-  }, [activeTab])
+    // Subscribe to updates
+    const unsubscribe = drowsinessService.addListener(updateData);
+    return unsubscribe;
+  }, [activeTab, updateData]);
   
   return (
     <Card className="col-span-3">
       <CardHeader>
-        <CardTitle>Drowsiness Levels</CardTitle>
+        <CardTitle>Drowsiness States</CardTitle>
         <CardDescription>
-          Detection values over time (0-100)
+          Drowsy time: {drowsyPercentage}% of selected period
         </CardDescription>
         <Tabs defaultValue="1h" className="space-y-4" onValueChange={setActiveTab}>
           <TabsList>
@@ -63,21 +82,22 @@ export function StatsChart() {
           >
             <defs>
               <linearGradient id="colorDrowsiness" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                <stop offset="5%" stopColor="#ff4d4f" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#ff4d4f" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="time" />
-            <YAxis />
-            <Tooltip />
+            <YAxis domain={[0, 100]} ticks={[0, 100]} tickFormatter={(value) => value === 100 ? 'Drowsy' : 'Alert'} />
+            <Tooltip formatter={(value, name) => [value === 100 ? 'Drowsy' : 'Alert', 'State']} />
             <Area
-              type="monotone"
+              type="stepAfter"
               dataKey="drowsiness"
-              name="Drowsiness Level"
-              stroke="#8884d8"
+              name="Drowsiness State"
+              stroke="#ff4d4f"
               fillOpacity={1}
               fill="url(#colorDrowsiness)"
+              isAnimationActive={false}
             />
           </AreaChart>
         </ResponsiveContainer>

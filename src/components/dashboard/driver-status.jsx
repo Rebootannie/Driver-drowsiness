@@ -1,14 +1,88 @@
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
+// import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 
-export function DriverStatus({ status }) {
+// export function DriverStatus({ status }) {
+//   const getStatusColor = () => {
+//     switch (status) {
+//       case "awake":
+//         return "bg-green-500"
+//       case "drowsy":
+//         return "bg-red-500"
+//       case "distracted":
+//         return "bg-yellow-500"
+//       default:
+//         return "bg-gray-500"
+//     }
+//   }
+
+//   const getStatusText = () => {
+//     switch (status) {
+//       case "awake":
+//         return "Driver is Alert"
+//       case "drowsy":
+//         return "Driver is Drowsy!"
+//       case "distracted":
+//         return "Driver is Distracted"
+//       default:
+//         return "Status Unknown"
+//     }
+//   }
+
+//   return (
+//     <Card className="overflow-hidden">
+//       <CardHeader className={`${getStatusColor()} text-white`}>
+//         <CardTitle className="text-lg font-bold text-center">Driver Status</CardTitle>
+//       </CardHeader>
+//       <CardContent className="pt-6">
+//         <div className="flex items-center justify-center flex-col">
+//           <div className={`h-16 w-16 rounded-full ${getStatusColor()} flex items-center justify-center mb-4`}>
+//             <StatusIcon status={status} />
+//           </div>
+//           <h3 className="text-xl font-bold mb-2">{getStatusText()}</h3>
+//           <p className="text-sm text-muted-foreground">
+//             {status === "drowsy" && "Warning: Take a break soon!"}
+//             {status === "distracted" && "Warning: Keep eyes on the road!"}
+//             {status === "awake" && "Safe driving detected"}
+//             {status === "unknown" && "Waiting for detection data..."}
+//           </p>
+//         </div>
+//       </CardContent>
+//     </Card>
+//   )
+// }
+
+// src/components/dashboard/driver-status.jsx
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
+import drowsinessService from "../../lib/drowsiness-service"
+
+export function DriverStatus() {
+  const [status, setStatus] = useState("awake")
+  const [drowsyTime, setDrowsyTime] = useState(0)
+  
+  useEffect(() => {
+    const unsubscribe = drowsinessService.addListener((data) => {
+      if (data.length === 0) return;
+      
+      // Get the most recent data point
+      const latest = data[data.length - 1];
+      
+      // Set status based on binary drowsiness state
+      setStatus(latest.isDrowsy ? "drowsy" : "awake");
+      
+      // Get statistics
+      const stats = drowsinessService.getStatistics();
+      setDrowsyTime(Math.round(stats.totalDrowsyTime / 1000)); // Convert to seconds
+    });
+    
+    return unsubscribe;
+  }, []);
+
   const getStatusColor = () => {
     switch (status) {
       case "awake":
         return "bg-green-500"
       case "drowsy":
         return "bg-red-500"
-      case "distracted":
-        return "bg-yellow-500"
       default:
         return "bg-gray-500"
     }
@@ -20,12 +94,17 @@ export function DriverStatus({ status }) {
         return "Driver is Alert"
       case "drowsy":
         return "Driver is Drowsy!"
-      case "distracted":
-        return "Driver is Distracted"
       default:
         return "Status Unknown"
     }
   }
+  
+  // Format seconds to MM:SS
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   return (
     <Card className="overflow-hidden">
@@ -40,15 +119,19 @@ export function DriverStatus({ status }) {
           <h3 className="text-xl font-bold mb-2">{getStatusText()}</h3>
           <p className="text-sm text-muted-foreground">
             {status === "drowsy" && "Warning: Take a break soon!"}
-            {status === "distracted" && "Warning: Keep eyes on the road!"}
             {status === "awake" && "Safe driving detected"}
-            {status === "unknown" && "Waiting for detection data..."}
           </p>
+          <div className="mt-4 px-4 py-2 bg-secondary rounded-md text-center">
+            <p className="text-sm font-medium">Total drowsy time</p>
+            <p className="text-xl font-bold">{formatTime(drowsyTime)}</p>
+          </div>
         </div>
       </CardContent>
     </Card>
   )
 }
+
+// Keep existing StatusIcon component...
 
 function StatusIcon({ status }) {
   if (status === "awake") {
