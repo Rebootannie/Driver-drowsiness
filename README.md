@@ -10,7 +10,7 @@ This project aims to develop a **Driver Drowsiness Detection System** that monit
 
 ## Installation
 
-To set up the project locally, follow these steps:
+To set up the project locally, firstly fork the repo to your github account and then follow these steps:
 
 1. **Clone the Repository**:
 
