@@ -46,6 +46,10 @@ Tailwind CSS
 NodeJs
 ExpressJs
 
+### Real Time Monitoring:
+Python (OpenCV)
+Jupyter
+
 ### Other Tools:
 ESLint
 PostCSS
